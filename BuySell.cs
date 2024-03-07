@@ -1,4 +1,6 @@
-﻿namespace ATAS.Indicators.Technical
+﻿using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace ATAS.Indicators.Technical
 {
     using System;
     using System.Collections.ObjectModel;
@@ -19,20 +21,16 @@
     using MColor = System.Windows.Media.Color;
     using MColors = System.Windows.Media.Colors;
     using Pen = System.Drawing.Pen;
-    using String = String;
-    using System.Runtime.ConstrainedExecution;
-    using static ATAS.Indicators.Technical.BarTimer;
+    using String = System.String;
     using System.Globalization;
     using OFT.Rendering.Settings;
-    using System.Windows.Ink;
+    using Newtonsoft.Json;
+    using System.Text;
+    using System.Reflection.Metadata;
 
     [DisplayName("TraderOracle Buy/Sell")]
     public class BuySell : Indicator
     {
-        private const String sVersion = "1.5";
-        private int iJunk = 0;
-        private bool bBigArrowUp = false;
-
         #region PRIVATE FIELDS
 
         private struct bars
@@ -51,7 +49,9 @@
         private List<bars> lsBar = new List<bars>();
         private List<string> lsH = new List<string>();
         private List<string> lsM = new List<string>();
-
+        private const String sVersion = "1.8";
+        private bool bBigArrowUp = false;
+        private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
 
         private int _lastBar = -1;
@@ -92,6 +92,7 @@
         private bool bShowStar = false;
         private bool bShowEvil = false;
         private bool bShowClusters = false;
+        private bool bShowLines = false;
 
         private int iMinDelta = 0;
         private int iMinDeltaPercent = 0;
@@ -150,6 +151,9 @@
         public bool UseAlerts { get; set; }
         [Display(ResourceType = typeof(Resources), GroupName = "Alerts", Name = "AlertFile")]
         public string AlertFile { get; set; } = "alert1";
+
+        [Display(GroupName = "Extras", Name = "Show Kama/EMA 200/VWAP lines")]
+        public bool ShowLines { get => bShowLines; set { bShowLines = value; RecalculateValues(); } }
 
         [Display(GroupName = "Extras", Name = "Show Triple Supertrend")]
         public bool ShowTripleSupertrend { get => bShowTripleSupertrend; set { bShowTripleSupertrend = value; RecalculateValues(); } }
@@ -221,7 +225,7 @@
         [Display(GroupName = "Custom MA Filter", Name = "Custom EMA Period", Description = "Price crosses your own EMA period")]
         [Range(1, 1000)]
         public int Custom_EMA_Period
-        { get => iMyEMAPeriod; set { if (value < 1) return; iMyEMAPeriod = _myEMA.Period = value;RecalculateValues(); }        }
+        { get => iMyEMAPeriod; set { if (value < 1) return; iMyEMAPeriod = _myEMA.Period = value; RecalculateValues(); } }
 
         [Display(GroupName = "Custom MA Filter", Name = "Use KAMA", Description = "Price crosses KAMA")]
         public bool Use_KAMA { get => bUseKAMA; set { bUseKAMA = value; RecalculateValues(); } }
@@ -251,11 +255,15 @@
             DataSeries.Add(_nine21);
             DataSeries.Add(_squeezie);
             DataSeries.Add(_paintBars);
+
             DataSeries.Add(_dnTrend);
             DataSeries.Add(_upTrend);
             DataSeries.Add(_upCloud);
             DataSeries.Add(_dnCloud);
-            DataSeries.Add(_kamanine);
+
+            DataSeries.Add(_lineVWAP);
+            DataSeries.Add(_lineEMA200);
+            DataSeries.Add(_lineKAMA);
 
             Add(_ao);
             Add(_ft);
@@ -266,6 +274,7 @@
             Add(_st3);
             Add(_adx);
             Add(_kama9);
+            Add(_VWAP);
             Add(_kama21);
             Add(_atr);
             Add(_hma);
@@ -274,6 +283,9 @@
         #endregion
 
         #region INDICATORS
+
+        private readonly VWAP _VWAP = new VWAP() { VWAPOnly = true, Type = VWAP.VWAPPeriodType.Daily, TWAPMode = VWAP.VWAPMode.VWAP, VolumeMode = VWAP.VolumeType.Total, Period = 300 };
+        private readonly EMA Ema200 = new EMA() { Period = 200 };
 
         private readonly SMA _Sshort = new SMA() { Period = 3 };
         private readonly SMA _Slong = new SMA() { Period = 10 };
@@ -358,7 +370,7 @@
                             Font.Bold = false;
                         }
                     }
-
+/*
                     if (ix.bar == bar)
                     {
                         renderString = ix.s.ToString(CultureInfo.InvariantCulture);
@@ -379,6 +391,7 @@
                         }
                         break;
                     }
+*/
                 }
 
 
@@ -451,7 +464,7 @@
         {
             var candle = GetCandle(bBar);
             bars ty;
-
+/*
             ty.s = strX;
             ty.bar = bBar;
             if (candle.Close > candle.Open || bOverride)
@@ -467,7 +480,7 @@
             lsBar.Add(ty);
 
             return;
-
+*/
             decimal _tick = ChartInfo.PriceChartContainer.Step;
             decimal loc = 0;
 
@@ -496,7 +509,6 @@
         [Range(0, 900)]
         public int Offset { get => iOffset; set { iOffset = value; RecalculateValues(); } }
 
-        private ValueDataSeries _kamanine = new("KAMA NINE") { VisualType = VisualMode.Line, Color = DefaultColors.Yellow.Convert(), Width = 5 };
         private RangeDataSeries _upCloud = new("Up Cloud") { RangeColor = MColor.FromArgb(73, 0, 255, 0), DrawAbovePrice = false };
         private RangeDataSeries _dnCloud = new("Down Cloud") { RangeColor = MColor.FromArgb(73, 255, 0, 0), DrawAbovePrice = false };
         private ValueDataSeries _dnTrend = new("Down SuperTrend") { VisualType = VisualMode.Square, Color = DefaultColors.Red.Convert(), Width = 2 };
@@ -511,6 +523,10 @@
 
         private readonly ValueDataSeries _posSeries = new("Regular Buy Signal") { Color = MColor.FromArgb(255, 0, 255, 0), VisualType = VisualMode.Dots, Width = 2 };
         private readonly ValueDataSeries _negSeries = new("Regular Sell Signal") { Color = MColor.FromArgb(255, 255, 104, 48), VisualType = VisualMode.Dots, Width = 2 };
+
+        private readonly ValueDataSeries _lineVWAP = new("VWAP") { Color = MColor.FromArgb(180, 30, 114, 250), VisualType = VisualMode.Line, Width = 4 };
+        private readonly ValueDataSeries _lineEMA200 = new("EMA 200") { Color = MColor.FromArgb(255, 165, 166, 164), VisualType = VisualMode.Line, Width = 4 };
+        private readonly ValueDataSeries _lineKAMA = new("KAMA 9") { Color = MColor.FromArgb(180, 252, 186, 3), VisualType = VisualMode.Line, Width = 3 };
 
         #endregion
 
@@ -560,7 +576,7 @@
             try
             {
                 HttpWebRequest myRequest = (HttpWebRequest)WebRequest.Create("https://www.forexfactory.com/calendar?day=today");
-                myRequest.Method = "GET"; 
+                myRequest.Method = "GET";
                 myRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36";
                 WebResponse myResponse = myRequest.GetResponse();
                 StreamReader sr = new StreamReader(myResponse.GetResponseStream(), System.Text.Encoding.UTF8);
@@ -658,10 +674,13 @@
             _macd.Calculate(pbar, value);
             _bb.Calculate(pbar, value);
             _rsi.Calculate(pbar, value);
+            Ema200.Calculate(pbar, value);
+
+            var e200 = ((ValueDataSeries)Ema200.DataSeries[0])[pbar];
+            var vwap = ((ValueDataSeries)_VWAP.DataSeries[0])[pbar];
+            var kama9 = ((ValueDataSeries)_kama9.DataSeries[0])[pbar];
 
             var ao = ((ValueDataSeries)_ao.DataSeries[0])[pbar];
-            var kama9 = ((ValueDataSeries)_kama9.DataSeries[0])[pbar];
-            var kama21 = ((ValueDataSeries)_kama9.DataSeries[0])[pbar];
             var m1 = ((ValueDataSeries)_macd.DataSeries[0])[pbar]; // macd
             var m2 = ((ValueDataSeries)_macd.DataSeries[1])[pbar]; // signal
             var m3 = ((ValueDataSeries)_macd.DataSeries[2])[pbar]; // difference
@@ -699,7 +718,7 @@
             var rsi1 = ((ValueDataSeries)_rsi.DataSeries[0])[pbar - 1];
             var rsi2 = ((ValueDataSeries)_rsi.DataSeries[0])[pbar - 2];
             var hma = ((ValueDataSeries)_hma.DataSeries[0])[pbar];
-            var phma = ((ValueDataSeries)_hma.DataSeries[0])[pbar-1];
+            var phma = ((ValueDataSeries)_hma.DataSeries[0])[pbar - 1];
 
             var hullUp = hma > phma;
             var hullDown = hma < phma;
@@ -712,7 +731,6 @@
             var psarSell = (psar > candle.Close);
             var ppsarSell = (ppsar > pcandle.Close);
 
-/*
             var eqHigh = c0R && c1R && c2G && c3G && (p1C.High > bb_top || p2C.High > bb_top) &&
                 candle.Close < p1C.Close &&
                 (p1C.Open == p2C.Close || p1C.Open == p2C.Close + _tick || p1C.Open + _tick == p2C.Close);
@@ -720,7 +738,6 @@
             var eqLow = c0G && c1G && c2R && c3R && (p1C.Low < bb_bottom || p2C.Low < bb_bottom) &&
                 candle.Close > p1C.Close &&
                 (p1C.Open == p2C.Close || p1C.Open == p2C.Close + _tick || p1C.Open + _tick == p2C.Close);
-*/
 
             var t1 = ((fast - slow) - (fastM - slowM)) * iWaddaSensitivity;
 
@@ -768,6 +785,13 @@
 
             #region ADVANCED LOGIC
 
+            if (bShowLines)
+            {
+                _lineEMA200[pbar] = e200;
+                _lineKAMA[pbar] = kama9;
+                _lineVWAP[pbar] = vwap;
+            }
+
             if (bShowTripleSupertrend)
             {
                 var atr = _atr[pbar];
@@ -783,9 +807,11 @@
 
             // Squeeze momentum relaxer show
             if (sq1 > 0 && sq1 < psq1 && psq1 > ppsq1 && bShowSqueeze)
-                _squeezie[pbar] = candle.High + _tick * 4;
+                DrawText(pbar, "SQ", Color.White, Color.Blue, false, true);
+            //_squeezie[pbar] = candle.High + _tick * 4;
             if (sq1 < 0 && sq1 > psq1 && psq1 < ppsq1 && bShowSqueeze)
-                _squeezie[pbar] = candle.Low - _tick * 4;
+                DrawText(pbar, "SQ", Color.White, Color.Blue, false, true);
+            //_squeezie[pbar] = candle.Low - _tick * 4;
 
             // 9/21 cross show
             if (nn > twone && prev_nn <= prev_twone && bShow921)
@@ -799,6 +825,11 @@
                     if ((candle.Close > p1C.Close && p1C.Close > p2C.Close && p2C.Close > p3C.Close) ||
                     (candle.Close < p1C.Close && p1C.Close < p2C.Close && p2C.Close < p3C.Close))
                         DrawText(pbar, "Stairs", Color.Yellow, Color.Transparent);
+
+                if (eqHigh)
+                    DrawText(pbar - 1, "Equal\nHigh", Color.Lime, Color.Transparent, false, true);
+                if (eqLow)
+                    DrawText(pbar - 1, "Equal\nLow", Color.Yellow, Color.Transparent, false, true);
             }
 
             if (bShowRevPattern)
@@ -843,8 +874,6 @@
                     DrawText(pbar, "TR", Color.Yellow, Color.BlueViolet, false, true);
             }
 
-            #endregion
-
             if (ppsarBuy && m3 > 0 && candle.Delta > 50 && !bBigArrowUp && bShowMACDPSARArrow)
             {
                 _posRev[bar] = candle.Low - (_tick * 2);
@@ -856,20 +885,33 @@
                 bBigArrowUp = false;
             }
 
+            #endregion
+
             #region ALERTS LOGIC
 
             if (_lastBar != bar)
             {
                 if (_lastBarCounted && UseAlerts)
                 {
+                    var priceString = candle.Close.ToString();
+
                     if (bVolumeImbalances)
                         if ((green && c1G && candle.Open > p1C.Close) || (red && c1R && candle.Open < p1C.Close))
+                        {
                             AddAlert(AlertFile, "Volume Imbalance");
+                            Task.Run(() => SendWebhookAndWriteToFile("IMBALANCED a chalupa ", InstrumentInfo.Instrument, priceString));
+                        }
 
                     if (bShowUp && bShowRegularBuySell)
+                    {
                         AddAlert(AlertFile, "BUY Signal");
+                        Task.Run(() => SendWebhookAndWriteToFile("BOUGHT a bean burrito ", InstrumentInfo.Instrument, priceString));
+                    }
                     else if (bShowDown && bShowRegularBuySell)
-                        AddAlert(AlertFile, "BUY Signal");
+                    {
+                        AddAlert(AlertFile, "SELL Signal");
+                        Task.Run(() => SendWebhookAndWriteToFile("SOLD a tostada ", InstrumentInfo.Instrument, priceString));
+                    }
 
                     if ((ppsarBuy && m3 > 0 && candle.Delta > 50 && !bBigArrowUp) || (ppsarSell && m3 < 0 && candle.Delta < 50 && bBigArrowUp) && bShowMACDPSARArrow)
                         AddAlert(AlertFile, "Big Arrow");
@@ -907,6 +949,45 @@
 
             if (!bNewsProcessed && bShowNews)
                 LoadStock(pbar);
+        }
+
+        #region MISC FUNCTIONS
+
+        private async Task SendWebhook(string message, string ticker, string price)
+        {
+            var fullMessage = $"{message} from {ticker} for ${price}";
+            var payload = new { content = fullMessage };
+            var jsonPayload = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var token = Environment.GetEnvironmentVariable("Webhook");
+            await client.PostAsync(token, content);
+        }
+        private SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
+        private async Task WriteToTextFile(string message, string ticker, string price)
+        {
+            var fullMessage = $"{message} for {ticker} at price {price}";
+
+            await semaphore.WaitAsync();
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(@"C:\temp\output.txt", true))
+                {
+                    await writer.WriteLineAsync(fullMessage);
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        private async Task SendWebhookAndWriteToFile(string message, string ticker, string price)
+        {
+            var sendWebhookTask = SendWebhook(message, ticker, price);
+            var writeToTextFileTask = WriteToTextFile(message, ticker, price);
+
+            await Task.WhenAll(sendWebhookTask, writeToTextFileTask);
         }
 
         private String EvilTimes(int bar)
@@ -970,6 +1051,8 @@
 
             return Color.White;
         }
+
+        #endregion
 
     }
 }
