@@ -49,7 +49,7 @@ namespace ATAS.Indicators.Technical
         private List<bars> lsBar = new List<bars>();
         private List<string> lsH = new List<string>();
         private List<string> lsM = new List<string>();
-        private const String sVersion = "1.8";
+        private const String sVersion = "1.9";
         private bool bBigArrowUp = false;
         private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
@@ -807,10 +807,10 @@ namespace ATAS.Indicators.Technical
 
             // Squeeze momentum relaxer show
             if (sq1 > 0 && sq1 < psq1 && psq1 > ppsq1 && bShowSqueeze)
-                DrawText(pbar, "SQ", Color.White, Color.Blue, false, true);
+                DrawText(pbar, "SQ", Color.Yellow, Color.MediumPurple, false, true);
             //_squeezie[pbar] = candle.High + _tick * 4;
             if (sq1 < 0 && sq1 > psq1 && psq1 < ppsq1 && bShowSqueeze)
-                DrawText(pbar, "SQ", Color.White, Color.Blue, false, true);
+                DrawText(pbar, "SQ", Color.Yellow, Color.MediumPurple, false, true);
             //_squeezie[pbar] = candle.Low - _tick * 4;
 
             // 9/21 cross show
@@ -827,9 +827,9 @@ namespace ATAS.Indicators.Technical
                         DrawText(pbar, "Stairs", Color.Yellow, Color.Transparent);
 
                 if (eqHigh)
-                    DrawText(pbar - 1, "Equal\nHigh", Color.Lime, Color.Transparent, false, true);
+                    DrawText(pbar - 1, "Eq Hi", Color.Lime, Color.Transparent, false, true);
                 if (eqLow)
-                    DrawText(pbar - 1, "Equal\nLow", Color.Yellow, Color.Transparent, false, true);
+                    DrawText(pbar - 1, "Eq Low", Color.Yellow, Color.Transparent, false, true);
             }
 
             if (bShowRevPattern)
