@@ -27,6 +27,7 @@ namespace ATAS.Indicators.Technical
     using Newtonsoft.Json;
     using System.Text;
     using System.Reflection.Metadata;
+    using Utils.Common.SystemInformation;
 
     [DisplayName("TraderOracle Buy/Sell")]
     public class BuySell : Indicator
@@ -60,6 +61,7 @@ namespace ATAS.Indicators.Technical
         private String lastEvil = "";
         private bool bShowUp = true;
         private bool bShowDown = true;
+        private bool bWadGreen = false;
 
         // Default TRUE
         private bool bShowTramp = true;          // SHOW
@@ -93,6 +95,7 @@ namespace ATAS.Indicators.Technical
         private bool bShowEvil = false;
         private bool bShowClusters = false;
         private bool bShowLines = false;
+        private bool bShowWaddahLine = false;
 
         private int iMinDelta = 0;
         private int iMinDeltaPercent = 0;
@@ -165,6 +168,10 @@ namespace ATAS.Indicators.Technical
         public bool Use_VolumeImbalances { get => bVolumeImbalances; set { bVolumeImbalances = value; RecalculateValues(); } }
         [Display(GroupName = "Extras", Name = "Show Nebula Cloud", Description = "Show cloud containing KAMA 9 and 21")]
         public bool Use_Cloud { get => bShowCloud; set { bShowCloud = value; RecalculateValues(); } }
+
+        [Display(GroupName = "Extras", Name = "Show Waddah Lines", Description = "Show large lines on screen when Waddah is long/short")]
+        public bool ShowWaddahLine { get => bShowWaddahLine; set { bShowWaddahLine = value; RecalculateValues(); } }
+
         [Display(GroupName = "Extras", Name = "Show Trampoline", Description = "Trampoline is the ultimate reversal indicator")]
         public bool Use_Tramp { get => bShowTramp; set { bShowTramp = value; RecalculateValues(); } }
 
@@ -494,6 +501,11 @@ namespace ATAS.Indicators.Technical
             else if (candle.Close < candle.Open && bSwap)
                 loc = candle.High + (_tick * iOffset);
 
+            if (strX == "▼")
+                loc = candle.High + (_tick * iOffset);
+            if (strX == "▲")
+                loc = candle.Low - (_tick * (iOffset * 2));
+
             AddText("Aver" + bBar, strX, true, bBar, loc, cI, cB, iFontSize, DrawingText.TextAlign.Center);
         }
 
@@ -687,8 +699,10 @@ namespace ATAS.Indicators.Technical
             var t3 = ((ValueDataSeries)_t3.DataSeries[0])[pbar];
             var fast = ((ValueDataSeries)fastEma.DataSeries[0])[pbar];
             var fastM = ((ValueDataSeries)fastEma.DataSeries[0])[pbar - 1];
+            var fastN = ((ValueDataSeries)fastEma.DataSeries[0])[pbar - 2];
             var slow = ((ValueDataSeries)slowEma.DataSeries[0])[pbar];
             var slowM = ((ValueDataSeries)slowEma.DataSeries[0])[pbar - 1];
+            var slowN = ((ValueDataSeries)slowEma.DataSeries[0])[pbar - 2];
             var sq1 = ((ValueDataSeries)_sq.DataSeries[0])[pbar];
             var sq2 = ((ValueDataSeries)_sq.DataSeries[1])[pbar];
             var psq1 = ((ValueDataSeries)_sq.DataSeries[0])[pbar - 1];
@@ -740,6 +754,29 @@ namespace ATAS.Indicators.Technical
                 (p1C.Open == p2C.Close || p1C.Open == p2C.Close + _tick || p1C.Open + _tick == p2C.Close);
 
             var t1 = ((fast - slow) - (fastM - slowM)) * iWaddaSensitivity;
+            var prevT1 = ((fastM - slowM) - (fastN - slowN)) * iWaddaSensitivity;
+            var s1 = bb_top - bb_bottom;
+
+            if (bShowWaddahLine)
+            {
+                _upCloud[pbar].Upper = 0;
+                _upCloud[pbar].Lower = 0;
+                _dnCloud[pbar].Upper = 0;
+                _dnCloud[pbar].Lower = 0;
+
+                if (t1 > 0 && t1 > prevT1 && t1 > s1) // && !bWadGreen)
+                {
+                    _upCloud[pbar].Upper = _kama9[pbar] + 500;
+                    _upCloud[pbar].Lower = _kama9[pbar] - 500;
+                    bWadGreen = true;
+                }
+                if (t1 <= 0) // && Math.Abs(t1) > s1) // && bWadGreen) && Math.Abs(t1) > Math.Abs(prevT1)
+                {
+                    //_dnCloud[pbar].Upper = _kama9[pbar] + 500;
+                    //_dnCloud[pbar].Lower = _kama9[pbar] - 500;
+                    bWadGreen = false;
+                }
+            }
 
             // Linda MACD
             var macd = _Sshort.Calculate(pbar, value) - _Slong.Calculate(pbar, value);
@@ -807,10 +844,10 @@ namespace ATAS.Indicators.Technical
 
             // Squeeze momentum relaxer show
             if (sq1 > 0 && sq1 < psq1 && psq1 > ppsq1 && bShowSqueeze)
-                DrawText(pbar, "SQ", Color.Yellow, Color.MediumPurple, false, true);
+                DrawText(pbar, "▼", Color.Yellow, Color.Transparent, false, true);
             //_squeezie[pbar] = candle.High + _tick * 4;
             if (sq1 < 0 && sq1 > psq1 && psq1 < ppsq1 && bShowSqueeze)
-                DrawText(pbar, "SQ", Color.Yellow, Color.MediumPurple, false, true);
+                DrawText(pbar, "▲", Color.Yellow, Color.Transparent, false, true);
             //_squeezie[pbar] = candle.Low - _tick * 4;
 
             // 9/21 cross show
