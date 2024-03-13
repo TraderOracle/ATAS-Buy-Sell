@@ -770,10 +770,10 @@ namespace ATAS.Indicators.Technical
                     _upCloud[pbar].Lower = _kama9[pbar] - 500;
                     bWadGreen = true;
                 }
-                if (t1 <= 0) // && Math.Abs(t1) > s1) // && bWadGreen) && Math.Abs(t1) > Math.Abs(prevT1)
+                if (t1 <= 0 && Math.Abs(t1) > s1) // && bWadGreen) // && Math.Abs(t1) > Math.Abs(prevT1)
                 {
-                    //_dnCloud[pbar].Upper = _kama9[pbar] + 500;
-                    //_dnCloud[pbar].Lower = _kama9[pbar] - 500;
+                    _dnCloud[pbar].Upper = _kama9[pbar] + 500;
+                    _dnCloud[pbar].Lower = _kama9[pbar] - 500;
                     bWadGreen = false;
                 }
             }
