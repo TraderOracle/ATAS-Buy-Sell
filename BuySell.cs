@@ -28,6 +28,8 @@ namespace ATAS.Indicators.Technical
     using System.Text;
     using System.Reflection.Metadata;
     using Utils.Common.SystemInformation;
+    using System.Media;
+    using static System.Net.Mime.MediaTypeNames;
 
     [DisplayName("TraderOracle Buy/Sell")]
     public class BuySell : Indicator
@@ -54,6 +56,13 @@ namespace ATAS.Indicators.Technical
         private bool bBigArrowUp = false;
         private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
+
+        private String sBuySellMe = "buysell.wav";
+        private String sVolImb = "volimb.wav";
+        private String sWaddah = "waddah.wav";
+        private String sMacdPsar = "macdpsar.wav";
+        private String sEqHiLow = "eqhilow.wav";
+        private String sVolRev = "volrev.wav";
 
         private int _lastBar = -1;
         private bool _lastBarCounted;
@@ -117,10 +126,62 @@ namespace ATAS.Indicators.Technical
 
         #region SETTINGS
 
+
         [Display(GroupName = "Buy/Sell Indicators", Name = "Show buy/sell dots")]
         public bool ShowRegularBuySell { get => bShowRegularBuySell; set { bShowRegularBuySell = value; RecalculateValues(); } }
         [Display(GroupName = "Buy/Sell Indicators", Name = "Show MACD/PSAR arrow")]
         public bool ShowBigArrow { get => bShowMACDPSARArrow; set { bShowMACDPSARArrow = value; RecalculateValues(); } }
+
+        // ========================================================================
+        // =======================    FILTER INDICATORS    ========================
+        // ========================================================================
+
+        [Display(GroupName = "Buy/Sell Filters", Name = "Waddah Explosion", Description = "The Waddah Explosion must be the correct color, and have a value")]
+        public bool Use_Waddah_Explosion { get => bUseWaddah; set { bUseWaddah = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Awesome Oscillator", Description = "AO is positive or negative")]
+        public bool Use_Awesome { get => bUseAO; set { bUseAO = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Parabolic SAR", Description = "The PSAR must be signaling a buy/sell signal same as the arrow")]
+        public bool Use_PSAR { get => bUsePSAR; set { bUsePSAR = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Squeeze Momentum", Description = "The squeeze must be the correct color")]
+        public bool Use_Squeeze_Momentum { get => bUseSqueeze; set { bUseSqueeze = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "MACD", Description = "Standard 12/26/9 MACD crossing in the correct direction")]
+        public bool Use_MACD { get => bUseMACD; set { bUseMACD = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Hull Moving Avg", Description = "Price must align to the HMA trend")]
+        public bool Use_HMA { get => bUseHMA; set { bUseHMA = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "SuperTrend", Description = "Price must align to the current SuperTrend trend")]
+        public bool Use_SuperTrend { get => bUseSuperTrend; set { bUseSuperTrend = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "T3", Description = "Price must cross the T3")]
+        public bool Use_T3 { get => bUseT3; set { bUseT3 = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Fisher Transform", Description = "Fisher Transform must cross to the correct direction")]
+        public bool Use_Fisher_Transform { get => bUseFisher; set { bUseFisher = value; RecalculateValues(); } }
+        [Display(GroupName = "Buy/Sell Filters", Name = "Minimum ADX", Description = "Minimum ADX value before showing buy/sell")]
+        [Range(0, 100)]
+        public int Min_ADX { get => iMinADX; set { if (value < 0) return; iMinADX = value; RecalculateValues(); } }
+
+        [Display(GroupName = "Cluster Signals", Name = "Show Cluster Lines")]
+        public bool ShowClusters { get => bShowClusters; set { bShowClusters = value; RecalculateValues(); } }
+        [Display(GroupName = "Cluster Signals", Name = "Cluster Volume Ratio")]
+        [Range(0, 9000)]
+        public int ClusterRatio { get => iClusterRatio; set { if (value < 0) return; iClusterRatio = value; RecalculateValues(); } }
+        [Display(GroupName = "Cluster Signals", Name = "Minimum Bid")]
+        [Range(0, 9000)]
+        public int MinBid { get => iMinBid; set { if (value < 0) return; iMinBid = value; RecalculateValues(); } }
+        [Display(GroupName = "Cluster Signals", Name = "Minimum Ask")]
+        [Range(0, 9000)]
+        public int MinAsk { get => iMinAsk; set { if (value < 0) return; iMinAsk = value; RecalculateValues(); } }
+
+        [Display(GroupName = "Custom MA Filter", Name = "Use Custom EMA", Description = "Price crosses your own EMA period")]
+        public bool Use_Custom_EMA { get => bUseMyEMA; set { bUseMyEMA = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom MA Filter", Name = "Custom EMA Period", Description = "Price crosses your own EMA period")]
+        [Range(1, 1000)]
+        public int Custom_EMA_Period
+        { get => iMyEMAPeriod; set { if (value < 1) return; iMyEMAPeriod = _myEMA.Period = value; RecalculateValues(); } }
+
+        [Display(GroupName = "Custom MA Filter", Name = "Use KAMA", Description = "Price crosses KAMA")]
+        public bool Use_KAMA { get => bUseKAMA; set { bUseKAMA = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom MA Filter", Name = "KAMA Period", Description = "Price crosses KAMA")]
+        [Range(1, 1000)]
+        public int Custom_KAMA_Period { get => iKAMAPeriod; set { if (value < 1) return; iKAMAPeriod = _kama9.EfficiencyRatioPeriod = value; RecalculateValues(); } }
 
         private class candleColor : Collection<Entity>
         {
@@ -189,56 +250,18 @@ namespace ATAS.Indicators.Technical
         public int NewsFont
         { get => iNewsFont; set { iNewsFont = value; RecalculateValues(); } }
 
-        // ========================================================================
-        // =======================    FILTER INDICATORS    ========================
-        // ========================================================================
-
-        [Display(GroupName = "Buy/Sell Filters", Name = "Waddah Explosion", Description = "The Waddah Explosion must be the correct color, and have a value")]
-        public bool Use_Waddah_Explosion { get => bUseWaddah; set { bUseWaddah = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Awesome Oscillator", Description = "AO is positive or negative")]
-        public bool Use_Awesome { get => bUseAO; set { bUseAO = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Parabolic SAR", Description = "The PSAR must be signaling a buy/sell signal same as the arrow")]
-        public bool Use_PSAR { get => bUsePSAR; set { bUsePSAR = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Squeeze Momentum", Description = "The squeeze must be the correct color")]
-        public bool Use_Squeeze_Momentum { get => bUseSqueeze; set { bUseSqueeze = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "MACD", Description = "Standard 12/26/9 MACD crossing in the correct direction")]
-        public bool Use_MACD { get => bUseMACD; set { bUseMACD = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Hull Moving Avg", Description = "Price must align to the HMA trend")]
-        public bool Use_HMA { get => bUseHMA; set { bUseHMA = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "SuperTrend", Description = "Price must align to the current SuperTrend trend")]
-        public bool Use_SuperTrend { get => bUseSuperTrend; set { bUseSuperTrend = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "T3", Description = "Price must cross the T3")]
-        public bool Use_T3 { get => bUseT3; set { bUseT3 = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Fisher Transform", Description = "Fisher Transform must cross to the correct direction")]
-        public bool Use_Fisher_Transform { get => bUseFisher; set { bUseFisher = value; RecalculateValues(); } }
-        [Display(GroupName = "Buy/Sell Filters", Name = "Minimum ADX", Description = "Minimum ADX value before showing buy/sell")]
-        [Range(0, 100)]
-        public int Min_ADX { get => iMinADX; set { if (value < 0) return; iMinADX = value; RecalculateValues(); } }
-
-        [Display(GroupName = "Cluster Signals", Name = "Show Cluster Lines")]
-        public bool ShowClusters { get => bShowClusters; set { bShowClusters = value; RecalculateValues(); } }
-        [Display(GroupName = "Cluster Signals", Name = "Cluster Volume Ratio")]
-        [Range(0, 9000)]
-        public int ClusterRatio { get => iClusterRatio; set { if (value < 0) return; iClusterRatio = value; RecalculateValues(); } }
-        [Display(GroupName = "Cluster Signals", Name = "Minimum Bid")]
-        [Range(0, 9000)]
-        public int MinBid { get => iMinBid; set { if (value < 0) return; iMinBid = value; RecalculateValues(); } }
-        [Display(GroupName = "Cluster Signals", Name = "Minimum Ask")]
-        [Range(0, 9000)]
-        public int MinAsk { get => iMinAsk; set { if (value < 0) return; iMinAsk = value; RecalculateValues(); } }
-
-        [Display(GroupName = "Custom MA Filter", Name = "Use Custom EMA", Description = "Price crosses your own EMA period")]
-        public bool Use_Custom_EMA { get => bUseMyEMA; set { bUseMyEMA = value; RecalculateValues(); } }
-        [Display(GroupName = "Custom MA Filter", Name = "Custom EMA Period", Description = "Price crosses your own EMA period")]
-        [Range(1, 1000)]
-        public int Custom_EMA_Period
-        { get => iMyEMAPeriod; set { if (value < 1) return; iMyEMAPeriod = _myEMA.Period = value; RecalculateValues(); } }
-
-        [Display(GroupName = "Custom MA Filter", Name = "Use KAMA", Description = "Price crosses KAMA")]
-        public bool Use_KAMA { get => bUseKAMA; set { bUseKAMA = value; RecalculateValues(); } }
-        [Display(GroupName = "Custom MA Filter", Name = "KAMA Period", Description = "Price crosses KAMA")]
-        [Range(1, 1000)]
-        public int Custom_KAMA_Period { get => iKAMAPeriod; set { if (value < 1) return; iKAMAPeriod = _kama9.EfficiencyRatioPeriod = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Buy/Sell Wav File")]
+        public String BuySellMe { get => sBuySellMe; set { sBuySellMe = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Volume Imbalance Wav File")]
+        public String VolImb { get => sVolImb; set { sVolImb = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Waddah Buy/Sell Wav File")]
+        public String Waddah { get => sWaddah; set { sWaddah = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Macd/Psar Wav File")]
+        public String MacdPsar { get => sMacdPsar; set { sMacdPsar = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Equal Hi/Low Wav File")]
+        public String EqHiLow { get => sEqHiLow; set { sEqHiLow = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Volume Reversal Wav File")]
+        public String VolRev { get => sVolRev; set { sVolRev = value; RecalculateValues(); } }
 
         private decimal VolSec(IndicatorCandle c) { return c.Volume / Convert.ToDecimal((c.LastTime - c.Time).TotalSeconds); }
 
@@ -1087,6 +1110,20 @@ namespace ATAS.Indicators.Technical
                 return Color.FromArgb(78, 152, 242);
 
             return Color.White;
+        }
+
+        private void PlaySound(String s)
+        {
+            try
+            {
+                string appPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                SoundPlayer player = new SoundPlayer();
+                player.SoundLocation = appPath + "\\" + s + ".wav";
+                player.Play();
+            }
+            catch
+            {
+            }
         }
 
         #endregion
