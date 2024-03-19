@@ -52,7 +52,7 @@ namespace ATAS.Indicators.Technical
         private List<bars> lsBar = new List<bars>();
         private List<string> lsH = new List<string>();
         private List<string> lsM = new List<string>();
-        private const String sVersion = "1.9";
+        private const String sVersion = "2.1";
         private bool bBigArrowUp = false;
         private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
@@ -357,6 +357,7 @@ namespace ATAS.Indicators.Technical
             if (!bShowPNL && !bShowEvil && !bShowNews && !bShowStar && !bAdvanced && !bShowRevPattern)
                 return;
 
+
             FontSetting Font = new("Arial", iFontSize);
             var renderString = "Howdy";
             var stringSize = context.MeasureString(renderString, Font.RenderObject);
@@ -426,7 +427,6 @@ namespace ATAS.Indicators.Technical
                     }
 */
                 }
-
 
                 var font2 = new RenderFont("Arial", iNewsFont);
                 var fontB = new RenderFont("Arial", iNewsFont, FontStyle.Bold);
