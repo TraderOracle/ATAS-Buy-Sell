@@ -57,12 +57,13 @@ namespace ATAS.Indicators.Technical
         private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
 
-        private String sBuySellMe = "buysell.wav";
-        private String sVolImb = "volimb.wav";
-        private String sWaddah = "waddah.wav";
-        private String sMacdPsar = "macdpsar.wav";
-        private String sEqHiLow = "eqhilow.wav";
-        private String sVolRev = "volrev.wav";
+        private String sBuyWav = "buysell.wav";
+        private String sSellWav = "buysell.wav";
+        private String sVolImbWav = "volimb.wav";
+        private String sWaddahWav = "waddah.wav";
+        private String sMacdPsarWav = "macdpsar.wav";
+        private String sEqHiLowWav = "eqhilow.wav";
+        private String sVolRevWav = "volrev.wav";
 
         private int _lastBar = -1;
         private bool _lastBarCounted;
@@ -250,18 +251,20 @@ namespace ATAS.Indicators.Technical
         public int NewsFont
         { get => iNewsFont; set { iNewsFont = value; RecalculateValues(); } }
 
-        [Display(GroupName = "Custom Sounds", Name = "Buy/Sell Wav File")]
-        public String BuySellMe { get => sBuySellMe; set { sBuySellMe = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Buy Wav File")]
+        public String BuyWav { get => sBuyWav; set { sBuyWav = value; RecalculateValues(); } }
+        [Display(GroupName = "Custom Sounds", Name = "Sell Wav File")]
+        public String SellWav { get => sSellWav; set { sSellWav = value; RecalculateValues(); } }
         [Display(GroupName = "Custom Sounds", Name = "Volume Imbalance Wav File")]
-        public String VolImb { get => sVolImb; set { sVolImb = value; RecalculateValues(); } }
+        public String VolImb { get => sVolImbWav; set { sVolImbWav = value; RecalculateValues(); } }
         [Display(GroupName = "Custom Sounds", Name = "Waddah Buy/Sell Wav File")]
-        public String Waddah { get => sWaddah; set { sWaddah = value; RecalculateValues(); } }
+        public String Waddah { get => sWaddahWav; set { sWaddahWav = value; RecalculateValues(); } }
         [Display(GroupName = "Custom Sounds", Name = "Macd/Psar Wav File")]
-        public String MacdPsar { get => sMacdPsar; set { sMacdPsar = value; RecalculateValues(); } }
+        public String MacdPsar { get => sMacdPsarWav; set { sMacdPsarWav = value; RecalculateValues(); } }
         [Display(GroupName = "Custom Sounds", Name = "Equal Hi/Low Wav File")]
-        public String EqHiLow { get => sEqHiLow; set { sEqHiLow = value; RecalculateValues(); } }
+        public String EqHiLow { get => sEqHiLowWav; set { sEqHiLowWav = value; RecalculateValues(); } }
         [Display(GroupName = "Custom Sounds", Name = "Volume Reversal Wav File")]
-        public String VolRev { get => sVolRev; set { sVolRev = value; RecalculateValues(); } }
+        public String VolRev { get => sVolRevWav; set { sVolRevWav = value; RecalculateValues(); } }
 
         private decimal VolSec(IndicatorCandle c) { return c.Volume / Convert.ToDecimal((c.LastTime - c.Time).TotalSeconds); }
 
@@ -365,7 +368,7 @@ namespace ATAS.Indicators.Technical
                 renderString = bar.ToString(CultureInfo.InvariantCulture);
                 stringSize = context.MeasureString(renderString, Font.RenderObject);
 
-                foreach (bars ix in lsBar)
+//                foreach (bars ix in lsBar)
                 {
                     if (bShowEvil)
                     {
@@ -382,7 +385,7 @@ namespace ATAS.Indicators.Technical
                         }
                     }
 
-                    if (bShowEvil || bShowStar)
+                    if (bShowStar)
                     {
                         Color bitches = StarTimes(bar);
                         if (bitches != Color.White && lastColor != bitches && bShowStar)
@@ -808,21 +811,23 @@ namespace ATAS.Indicators.Technical
 
             #endregion
 
-            // ========================    UP CONDITIONS    ===========================
-
             if ((candle.Delta < iMinDelta) || (!macdUp && bUseMACD) || (psarSell && bUsePSAR) || (!fisherUp && bUseFisher) || (value < t3 && bUseT3) || (value < kama9 && bUseKAMA) || (value < myema && bUseMyEMA) || (t1 < 0 && bUseWaddah) || (ao < 0 && bUseAO) || (stu2 == 0 && bUseSuperTrend) || (sq1 < 0 && bUseSqueeze) || x < iMinADX || (bUseHMA && hullDown))
                 bShowUp = false;
 
-            if (green && bShowUp && bShowRegularBuySell)
+            if (bShowUp && bShowRegularBuySell)
+            {
                 _posSeries[pbar] = candle.Low - (_tick * 2);
-
-            // ========================    DOWN CONDITIONS    =========================
+                PlaySound(sBuyWav, pbar);
+            }
 
             if ((candle.Delta > (iMinDelta * -1)) || (psarBuy && bUsePSAR) || (!macdDown && bUseMACD) || (!fisherDown && bUseFisher) || (value > kama9 && bUseKAMA) || (value > t3 && bUseT3) || (value > myema && bUseMyEMA) || (t1 >= 0 && bUseWaddah) || (ao > 0 && bUseAO) || (std2 == 0 && bUseSuperTrend) || (sq1 > 0 && bUseSqueeze) || x < iMinADX || (bUseHMA && hullUp))
                 bShowDown = false;
 
-            if (red && bShowDown && bShowRegularBuySell)
+            if (bShowDown && bShowRegularBuySell)
+            {
                 _negSeries[pbar] = candle.High + _tick * 2;
+                PlaySound(sSellWav, pbar);
+            }
 
             if (canColor > 1)
             {
@@ -887,9 +892,17 @@ namespace ATAS.Indicators.Technical
                         DrawText(pbar, "Stairs", Color.Yellow, Color.Transparent);
 
                 if (eqHigh)
+                {
                     DrawText(pbar - 1, "Eq Hi", Color.Lime, Color.Transparent, false, true);
+                    PlaySound(sEqHiLowWav, pbar);
+                }
+                    
                 if (eqLow)
+                {
                     DrawText(pbar - 1, "Eq Low", Color.Yellow, Color.Transparent, false, true);
+                    PlaySound(sEqHiLowWav, pbar);
+                }
+                    
             }
 
             if (bShowRevPattern)
@@ -900,10 +913,17 @@ namespace ATAS.Indicators.Technical
                     DrawText(pbar, "Wick", Color.Yellow, Color.Transparent, false, true);
 
                 if (c0G && c1R && c2R && VolSec(p1C) > VolSec(p2C) && VolSec(p2C) > VolSec(p3C) && candle.Delta < 0)
+                {
                     DrawText(pbar, "Vol\nRev", Color.Yellow, Color.Transparent, false, true);
+                    PlaySound(sVolRevWav, pbar);
+                }
+                    
                 if (c0R && c1G && c2G && VolSec(p1C) > VolSec(p2C) && VolSec(p2C) > VolSec(p3C) && candle.Delta > 0)
+                {
                     DrawText(pbar, "Vol\nRev", Color.Lime, Color.Transparent, false, true);
-
+                    PlaySound(sVolRevWav, pbar);
+                }
+                    
                 if (ThreeOutUp)
                     DrawText(pbar, "3oU", Color.Yellow, Color.Transparent);
                 if (ThreeOutDown && bShowRevPattern)
@@ -938,11 +958,13 @@ namespace ATAS.Indicators.Technical
             {
                 _posRev[bar] = candle.Low - (_tick * 2);
                 bBigArrowUp = true;
+                PlaySound(sMacdPsarWav, pbar);
             }
             if (ppsarSell && m3 < 0 && candle.Delta < 50 && bBigArrowUp && bShowMACDPSARArrow)
             {
                 _negRev[bar] = candle.High + (_tick * 2);
                 bBigArrowUp = false;
+                PlaySound(sMacdPsarWav, pbar);
             }
 
             #endregion
@@ -1112,13 +1134,14 @@ namespace ATAS.Indicators.Technical
             return Color.White;
         }
 
-        private void PlaySound(String s)
+        private void PlaySound(String s, int bar)
         {
+            if (bar > CurrentBar - 2)
             try
             {
                 string appPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
                 SoundPlayer player = new SoundPlayer();
-                player.SoundLocation = appPath + "\\" + s + ".wav";
+                player.SoundLocation = appPath + "\\sounds\\" + s + ".wav";
                 player.Play();
             }
             catch
