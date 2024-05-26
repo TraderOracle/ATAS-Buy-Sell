@@ -35,7 +35,7 @@ namespace ATAS.Indicators.Technical
     {
         private const String sVersion = "2.5";
         private int iTouched = 0;
-        private bool bVolImbFinished = false;
+        private bool bVolImbFinished = false; 
 
         #region PRIVATE FIELDS
 
