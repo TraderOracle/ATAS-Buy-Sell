@@ -934,7 +934,7 @@ namespace ATAS.Indicators.Technical
             if (bShowUp && bShowRegularBuySell)
             {
                 _posSeries[pbar] = candle.Low - (_tick * iOffset);
-                iFutureSound = 3;
+                iFutureSound = 10;
             }
 
             if ((candle.Delta > (iMinDelta * -1)) || (psarBuy && bUsePSAR) || (!macdDown && bUseMACD) || (!fisherDown && bUseFisher) || (value > kama9 && bUseKAMA) || (value > t3 && bUseT3) || (value > myema && bUseMyEMA) || (t1 >= 0 && bUseWaddah) || (ao > 0 && bUseAO) || (std2 == 0 && bUseSuperTrend) || (sq1 > 0 && bUseSqueeze) || x < iMinADX || (bUseHMA && hullUp))
@@ -943,7 +943,7 @@ namespace ATAS.Indicators.Technical
             if (bShowDown && bShowRegularBuySell)
             {
                 _negSeries[pbar] = candle.High + _tick * iOffset;
-                iFutureSound = 4;
+                iFutureSound = 11;
             }
 
             if (canColor > 1)
@@ -1160,30 +1160,47 @@ namespace ATAS.Indicators.Technical
                     {
                         case 1:
                             play("majorline");
+                            Task.Run(() => SendWebhookAndWriteToFile("MAJOR LINE WICKED taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 2:
                             play("VolRev");
+                            Task.Run(() => SendWebhookAndWriteToFile("VOLUME REVERSED taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 3:
                             play("intensity");
+                            Task.Run(() => SendWebhookAndWriteToFile("INTENSITY taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 4:
                             play("stairs");
+                            Task.Run(() => SendWebhookAndWriteToFile("STAIRS taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 5:
                             play("squeezie");
+                            Task.Run(() => SendWebhookAndWriteToFile("SQUEEZED taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 6:
                             play("equal high");
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL HIGH taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 7:
                             play("equal low");
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL LOW taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 8:
                             play("trampoline");
+                            Task.Run(() => SendWebhookAndWriteToFile("TRAMPOLINE taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         case 9:
                             play("kama");
+                            Task.Run(() => SendWebhookAndWriteToFile("KAMA BOUNCE taco ", InstrumentInfo.Instrument, priceString));
+                            break;
+                        case 10:
+                            play("buy");
+                            Task.Run(() => SendWebhookAndWriteToFile("BOUGHT taco ", InstrumentInfo.Instrument, priceString));
+                            break;
+                        case 11:
+                            play("sell");
+                            Task.Run(() => SendWebhookAndWriteToFile("SOLD taco ", InstrumentInfo.Instrument, priceString));
                             break;
                         default: break;
                     }
@@ -1207,18 +1224,18 @@ namespace ATAS.Indicators.Technical
                         //AddAlert(AlertFile, "Bollinger Signal");
                         Task.Run(() => SendWebhookAndWriteToFile("BOLLINGER taco ", InstrumentInfo.Instrument, priceString));
                     }
-                    if (bShowUp && bShowRegularBuySell)
-                    {
-                        //AddAlert(AlertFile, "BUY Signal");
-                        Task.Run(() => SendWebhookAndWriteToFile("BOUGHT a tostada ", InstrumentInfo.Instrument, priceString));
-                        play("buy");
-                    }
-                    else if (bShowDown && bShowRegularBuySell)
-                    {
-                        //AddAlert(AlertFile, "SELL Signal");
-                        Task.Run(() => SendWebhookAndWriteToFile("SOLD a tostada ", InstrumentInfo.Instrument, priceString));
-                        play("sell");
-                    }
+                    //if (bShowUp && bShowRegularBuySell)
+                    //{
+                    //    //AddAlert(AlertFile, "BUY Signal");
+                    //    Task.Run(() => SendWebhookAndWriteToFile("BOUGHT a tostada ", InstrumentInfo.Instrument, priceString));
+                    //    play("buy");
+                    //}
+                    //else if (bShowDown && bShowRegularBuySell)
+                    //{
+                    //    //AddAlert(AlertFile, "SELL Signal");
+                    //    Task.Run(() => SendWebhookAndWriteToFile("SOLD a tostada ", InstrumentInfo.Instrument, priceString));
+                    //    play("sell");
+                    //}
 
                    // if ((ppsarBuy && m3 > 0 && candle.Delta > 50 && !bBigArrowUp) || (ppsarSell && m3 < 0 && candle.Delta < 50 && bBigArrowUp) && bShowMACDPSARArrow)
                         //AddAlert(AlertFile, "Big Arrow");
