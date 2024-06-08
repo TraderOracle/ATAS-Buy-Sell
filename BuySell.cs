@@ -632,36 +632,6 @@ namespace ATAS.Indicators.Technical
 
         #endregion
 
-        private void MarkOpenSession(int bar)
-        {
-            var candle = GetCandle(bar);
-            var diff = InstrumentInfo.TimeZone;
-            var time = candle.Time.AddHours(diff);
-            var today = DateTime.Today.Year.ToString() + "-" + DateTime.Today.Month.ToString() + "-" + DateTime.Today.Day.ToString();
-
-            if (time > DateTime.Parse(today + " 08:20AM") && time < DateTime.Parse(today + " 08:29AM"))
-            {
-                _highest = candle.High;
-                _highBar = bar;
-                _lowest = candle.Low;
-                _lowBar = bar;
-            }
-
-            if (time > DateTime.Parse(today + " 08:30AM") && time < DateTime.Parse(today + " 09:30AM"))
-            {
-                if (candle.High > _highest)
-                {
-                    _highest = candle.High;
-                    _highBar = bar;
-                }
-                if (candle.Low < _lowest)
-                {
-                    _lowest = candle.Low;
-                    _lowBar = bar;
-                }
-            }
-        }
-
         #region Stock HTTP Fetch
 
         private void ParseStockEvents(String result, int bar)
@@ -1238,51 +1208,51 @@ namespace ATAS.Indicators.Technical
                             break;
                         case 2:
                             play("VolRev");
-                            Task.Run(() => SendWebhookAndWriteToFile("VOLUME REVERSED taco ", InstrumentInfo.Instrument, priceString, "VolRev"));
+                            Task.Run(() => SendWebhookAndWriteToFile("VOLUME REVERSED taco", InstrumentInfo.Instrument, priceString, "VolRev"));
                             break;
                         case 3:
                             play("intensity");
-                            Task.Run(() => SendWebhookAndWriteToFile("INTENSITY taco ", InstrumentInfo.Instrument, priceString, "intensity"));
+                            Task.Run(() => SendWebhookAndWriteToFile("INTENSITY taco", InstrumentInfo.Instrument, priceString, "intensity"));
                             break;
                         case 4:
                             play("stairs");
-                            Task.Run(() => SendWebhookAndWriteToFile("STAIRS taco ", InstrumentInfo.Instrument, priceString, "stairs"));
+                            Task.Run(() => SendWebhookAndWriteToFile("STAIRS taco", InstrumentInfo.Instrument, priceString, "stairs"));
                             break;
                         case 5:
                             play("squeezie");
-                            Task.Run(() => SendWebhookAndWriteToFile("SQUEEZED taco ", InstrumentInfo.Instrument, priceString, "squeezie"));
+                            Task.Run(() => SendWebhookAndWriteToFile("SQUEEZED taco", InstrumentInfo.Instrument, priceString, "squeezie"));
                             break;
                         case 6:
                             play("equal high");
-                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL HIGH taco ", InstrumentInfo.Instrument, priceString, "equalhigh"));
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL HIGH taco", InstrumentInfo.Instrument, priceString, "equalhigh"));
                             break;
                         case 7:
                             play("equal low");
-                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL LOW taco ", InstrumentInfo.Instrument, priceString, "equallow"));
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL LOW taco", InstrumentInfo.Instrument, priceString, "equallow"));
                             break;
                         case 8:
                             play("trampoline");
-                            Task.Run(() => SendWebhookAndWriteToFile("TRAMPOLINE taco ", InstrumentInfo.Instrument, priceString, "trampoline"));
+                            Task.Run(() => SendWebhookAndWriteToFile("TRAMPOLINE taco", InstrumentInfo.Instrument, priceString, "trampoline"));
                             break;
                         case 9:
                             play("kama");
-                            Task.Run(() => SendWebhookAndWriteToFile("KAMA BOUNCE taco ", InstrumentInfo.Instrument, priceString, "kama"));
+                            Task.Run(() => SendWebhookAndWriteToFile("KAMA BOUNCE taco", InstrumentInfo.Instrument, priceString, "kama"));
                             break;
                         case 10:
                             play("buy");
-                            Task.Run(() => SendWebhookAndWriteToFile("BOUGHT taco ", InstrumentInfo.Instrument, priceString, "buy"));
+                            Task.Run(() => SendWebhookAndWriteToFile("BOUGHT taco", InstrumentInfo.Instrument, priceString, "buy"));
                             break;
                         case 11:
                             play("sell");
-                            Task.Run(() => SendWebhookAndWriteToFile("SOLD taco ", InstrumentInfo.Instrument, priceString, "sell"));
+                            Task.Run(() => SendWebhookAndWriteToFile("SOLD taco", InstrumentInfo.Instrument, priceString, "sell"));
                             break;
                         case 12:
                             play("volimb");
-                            Task.Run(() => SendWebhookAndWriteToFile("IMBALANCED a chalupa ", InstrumentInfo.Instrument, priceString, "volimb"));
+                            Task.Run(() => SendWebhookAndWriteToFile("IMBALANCED chalupa", InstrumentInfo.Instrument, priceString, "volimb"));
                             break;
                         case 13:
                             play("dojicity");
-                            Task.Run(() => SendWebhookAndWriteToFile("DOJI CITY a chalupa ", InstrumentInfo.Instrument, priceString, "dojicity"));
+                            Task.Run(() => SendWebhookAndWriteToFile("DOJI CITY chalupa", InstrumentInfo.Instrument, priceString, "dojicity"));
                             break;
                         default: break;
                     }
@@ -1359,9 +1329,42 @@ namespace ATAS.Indicators.Technical
 
         #region MISC FUNCTIONS
 
+        private void MarkOpenSession(int bar)
+        {
+            var candle = GetCandle(bar);
+            var diff = InstrumentInfo.TimeZone;
+            var time = candle.Time.AddHours(diff);
+            var today = DateTime.Today.Year.ToString() + "-" + DateTime.Today.Month.ToString() + "-" + DateTime.Today.Day.ToString();
+
+            if (time > DateTime.Parse(today + " 08:20AM") && time < DateTime.Parse(today + " 08:29AM"))
+            {
+                _highest = candle.High;
+                _highBar = bar;
+                _lowest = candle.Low;
+                _lowBar = bar;
+            }
+
+            if (time > DateTime.Parse(today + " 08:30AM") && time < DateTime.Parse(today + " 09:30AM"))
+            {
+                if (candle.High > _highest)
+                {
+                    _highest = candle.High;
+                    _highBar = bar;
+                }
+                if (candle.Low < _lowest)
+                {
+                    _lowest = candle.Low;
+                    _lowBar = bar;
+                }
+            }
+        }
+
         private async Task SendWebhook(string message, string ticker, string price)
         {
-            var fullMessage = $"{message} from {ticker} for ${price}";
+            DateTime bitches = new DateTime();
+            bitches = DateTime.Now;
+            bitches = bitches.AddHours(1);
+            var fullMessage = $"{message} from {ticker} for ${price} at " + bitches.ToString("h:mm:ss tt") + " EST";
             var payload = new { content = fullMessage };
             var jsonPayload = JsonConvert.SerializeObject(payload);
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
@@ -1372,16 +1375,10 @@ namespace ATAS.Indicators.Technical
 
         private async Task WriteToTextFile(string file)
         {
-            var fullMessage = "howdy";
-
             await semaphore.WaitAsync();
             try
             {
-                System.Diagnostics.Process.Start("cmd.exe", "/c " + @"C:\SierraAlerts\" + file + ".bat");
-                //using (StreamWriter writer = new StreamWriter(@"C:\SierraAlerts\" + file + ".txt", true))
-                //{
-                //    await writer.WriteLineAsync(fullMessage);
-                //}
+                System.Diagnostics.Process.Start("cmd.exe", "/c " + @"C:\SierraAlerts\copyimage.bat " + file);
             }
             finally
             {
