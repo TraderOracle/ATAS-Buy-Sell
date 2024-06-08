@@ -40,7 +40,7 @@ namespace ATAS.Indicators.Technical
     [DisplayName("TraderOracle Buy/Sell")]
     public class BuySell : Indicator
     {
-        private const String sVersion = "2.9";
+        private const String sVersion = "3.0";
         private int iTouched = 0;
         private bool bVolImbFinished = false;
 
@@ -73,8 +73,8 @@ namespace ATAS.Indicators.Technical
         private static readonly HttpClient client = new HttpClient();
         private readonly PaintbarsDataSeries _paintBars = new("Paint bars");
 
-        private String _highS = "Session Open High";
-        private String _lowS = "Session Open Low";
+        private String _highS = "1st Hour High";
+        private String _lowS = "1st Hour Low";
         private int _highBar;
         private int _lowBar;
         private decimal _highest = 0;
@@ -639,8 +639,6 @@ namespace ATAS.Indicators.Technical
             var time = candle.Time.AddHours(diff);
             var today = DateTime.Today.Year.ToString() + "-" + DateTime.Today.Month.ToString() + "-" + DateTime.Today.Day.ToString();
 
-            today = "2024-06-06";
-
             if (time > DateTime.Parse(today + " 08:20AM") && time < DateTime.Parse(today + " 08:29AM"))
             {
                 _highest = candle.High;
@@ -725,8 +723,12 @@ namespace ATAS.Indicators.Technical
 
         private void play(String s)
         {
-            SoundPlayer my_wave_file = new SoundPlayer("c:/SierraAlerts/" + s + ".wav");
-            my_wave_file.PlaySync();
+            try
+            {
+                SoundPlayer my_wave_file = new SoundPlayer("c:/SierraAlerts/" + s + ".wav");
+                my_wave_file.PlaySync();
+            }
+            catch (Exception)            {            }
         }
 
         #endregion
@@ -1232,55 +1234,55 @@ namespace ATAS.Indicators.Technical
                     {
                         case 1:
                             play("majorline");
-                            Task.Run(() => SendWebhookAndWriteToFile("MAJOR LINE WICKED taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("MAJOR LINE WICKED taco ", InstrumentInfo.Instrument, priceString, "majorline"));
                             break;
                         case 2:
                             play("VolRev");
-                            Task.Run(() => SendWebhookAndWriteToFile("VOLUME REVERSED taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("VOLUME REVERSED taco ", InstrumentInfo.Instrument, priceString, "VolRev"));
                             break;
                         case 3:
                             play("intensity");
-                            Task.Run(() => SendWebhookAndWriteToFile("INTENSITY taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("INTENSITY taco ", InstrumentInfo.Instrument, priceString, "intensity"));
                             break;
                         case 4:
                             play("stairs");
-                            Task.Run(() => SendWebhookAndWriteToFile("STAIRS taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("STAIRS taco ", InstrumentInfo.Instrument, priceString, "stairs"));
                             break;
                         case 5:
                             play("squeezie");
-                            Task.Run(() => SendWebhookAndWriteToFile("SQUEEZED taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("SQUEEZED taco ", InstrumentInfo.Instrument, priceString, "squeezie"));
                             break;
                         case 6:
                             play("equal high");
-                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL HIGH taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL HIGH taco ", InstrumentInfo.Instrument, priceString, "equalhigh"));
                             break;
                         case 7:
                             play("equal low");
-                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL LOW taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("EQUAL LOW taco ", InstrumentInfo.Instrument, priceString, "equallow"));
                             break;
                         case 8:
                             play("trampoline");
-                            Task.Run(() => SendWebhookAndWriteToFile("TRAMPOLINE taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("TRAMPOLINE taco ", InstrumentInfo.Instrument, priceString, "trampoline"));
                             break;
                         case 9:
                             play("kama");
-                            Task.Run(() => SendWebhookAndWriteToFile("KAMA BOUNCE taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("KAMA BOUNCE taco ", InstrumentInfo.Instrument, priceString, "kama"));
                             break;
                         case 10:
                             play("buy");
-                            Task.Run(() => SendWebhookAndWriteToFile("BOUGHT taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("BOUGHT taco ", InstrumentInfo.Instrument, priceString, "buy"));
                             break;
                         case 11:
                             play("sell");
-                            Task.Run(() => SendWebhookAndWriteToFile("SOLD taco ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("SOLD taco ", InstrumentInfo.Instrument, priceString, "sell"));
                             break;
                         case 12:
                             play("volimb");
-                            Task.Run(() => SendWebhookAndWriteToFile("IMBALANCED a chalupa ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("IMBALANCED a chalupa ", InstrumentInfo.Instrument, priceString, "volimb"));
                             break;
                         case 13:
                             play("dojicity");
-                            Task.Run(() => SendWebhookAndWriteToFile("DOJI CITY a chalupa ", InstrumentInfo.Instrument, priceString));
+                            Task.Run(() => SendWebhookAndWriteToFile("DOJI CITY a chalupa ", InstrumentInfo.Instrument, priceString, "dojicity"));
                             break;
                         default: break;
                     }
@@ -1368,17 +1370,18 @@ namespace ATAS.Indicators.Technical
         }
         private SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
-        private async Task WriteToTextFile(string message, string ticker, string price)
+        private async Task WriteToTextFile(string file)
         {
-            var fullMessage = $"{message} for {ticker} at price {price}";
+            var fullMessage = "howdy";
 
             await semaphore.WaitAsync();
             try
             {
-                using (StreamWriter writer = new StreamWriter(@"C:\temp\output.txt", true))
-                {
-                    await writer.WriteLineAsync(fullMessage);
-                }
+                System.Diagnostics.Process.Start("cmd.exe", "/c " + @"C:\SierraAlerts\" + file + ".bat");
+                //using (StreamWriter writer = new StreamWriter(@"C:\SierraAlerts\" + file + ".txt", true))
+                //{
+                //    await writer.WriteLineAsync(fullMessage);
+                //}
             }
             finally
             {
@@ -1386,10 +1389,10 @@ namespace ATAS.Indicators.Technical
             }
         }
 
-        private async Task SendWebhookAndWriteToFile(string message, string ticker, string price)
+        private async Task SendWebhookAndWriteToFile(string message, string ticker, string price, string file)
         {
             var sendWebhookTask = SendWebhook(message, ticker, price);
-            var writeToTextFileTask = WriteToTextFile(message, ticker, price);
+            var writeToTextFileTask = WriteToTextFile(file);
 
             await Task.WhenAll(sendWebhookTask, writeToTextFileTask);
         }
