@@ -43,6 +43,7 @@ namespace ATAS.Indicators.Technical
         private const String sVersion = "3.0";
         private int iTouched = 0;
         private bool bVolImbFinished = false;
+        private bool bIgnoreBadWicks = true;
 
         #region PRIVATE FIELDS
 
@@ -184,6 +185,10 @@ namespace ATAS.Indicators.Technical
         public bool Use_T3 { get => bUseT3; set { bUseT3 = value; RecalculateValues(); } }
         [Display(GroupName = "Buy/Sell Filters", Name = "Fisher Transform", Description = "Fisher Transform must cross to the correct direction")]
         public bool Use_Fisher_Transform { get => bUseFisher; set { bUseFisher = value; RecalculateValues(); } }
+
+        [Display(GroupName = "Buy/Sell Filters", Name = "Ignore bad candlesticks", Description = "If candlestick pattern doesn't fit the trade signal, don't show")]
+        public bool IgnoreBadWicks { get => bIgnoreBadWicks; set { bIgnoreBadWicks = value; RecalculateValues(); } }
+
         [Display(GroupName = "Buy/Sell Filters", Name = "Minimum ADX", Description = "Minimum ADX value before showing buy/sell")]
         [Range(0, 100)]
         public int Min_ADX { get => iMinADX; set { if (value < 0) return; iMinADX = value; RecalculateValues(); } }
@@ -386,7 +391,6 @@ namespace ATAS.Indicators.Technical
         private readonly BollingerBands _bb = new BollingerBands() { Period = 20, Shift = 0, Width = 2 };
         private readonly KAMA _kama9 = new KAMA() { ShortPeriod = 2, LongPeriod = 109, EfficiencyRatioPeriod = 9 };
         private readonly KAMA _kama21 = new KAMA() { ShortPeriod = 2, LongPeriod = 109, EfficiencyRatioPeriod = 21 };
-        private readonly MACD _macd = new MACD() { ShortPeriod = 3, LongPeriod = 10, SignalPeriod = 16 };
         private readonly T3 _t3 = new T3() { Period = 10, Multiplier = 1 };
         private readonly SqueezeMomentum _sq = new SqueezeMomentum() { BBPeriod = 20, BBMultFactor = 2, KCPeriod = 20, KCMultFactor = 1.5m, UseTrueRange = false };
 
@@ -789,7 +793,7 @@ namespace ATAS.Indicators.Technical
             slowEma.Calculate(pbar, value);
             _9.Calculate(pbar, value);
             _21.Calculate(pbar, value);
-            _macd.Calculate(pbar, value);
+
             _bb.Calculate(pbar, value);
             _rsi.Calculate(pbar, value);
             Ema200.Calculate(pbar, value);
@@ -799,9 +803,6 @@ namespace ATAS.Indicators.Technical
             var kama9 = ((ValueDataSeries)_kama9.DataSeries[0])[pbar];
 
             var ao = ((ValueDataSeries)_ao.DataSeries[0])[pbar];
-            var m1 = ((ValueDataSeries)_macd.DataSeries[0])[pbar]; // macd
-            var m2 = ((ValueDataSeries)_macd.DataSeries[1])[pbar]; // signal
-            var m3 = ((ValueDataSeries)_macd.DataSeries[2])[pbar]; // difference
             var t3 = ((ValueDataSeries)_t3.DataSeries[0])[pbar];
             var fast = ((ValueDataSeries)fastEma.DataSeries[0])[pbar];
             var fastM = ((ValueDataSeries)fastEma.DataSeries[0])[pbar - 1];
@@ -840,12 +841,18 @@ namespace ATAS.Indicators.Technical
             var hma = ((ValueDataSeries)_hma.DataSeries[0])[pbar];
             var phma = ((ValueDataSeries)_hma.DataSeries[0])[pbar - 1];
 
+            // Linda MACD
+            var macd = _Sshort.Calculate(pbar, value) - _Slong.Calculate(pbar, value);
+            var signal = _Ssignal.Calculate(pbar, macd);
+            var m3 = macd - signal;
+
             var hullUp = hma > phma;
             var hullDown = hma < phma;
             var fisherUp = (f1 < f2);
             var fisherDown = (f2 < f1);
-            var macdUp = (m1 > m2);
-            var macdDown = (m1 < m2);
+            var macdUp = (macd > signal);
+            var macdDown = (macd < signal);
+
             var psarBuy = (psar < candle.Close);
             var ppsarBuy = (ppsar < pcandle.Close);
             var psarSell = (psar > candle.Close);
@@ -862,11 +869,6 @@ namespace ATAS.Indicators.Technical
             var t1 = ((fast - slow) - (fastM - slowM)) * iWaddaSensitivity;
             var prevT1 = ((fastM - slowM) - (fastN - slowN)) * iWaddaSensitivity;
             var s1 = bb_top - bb_bottom;
-
-            // Linda MACD
-            var macd = _Sshort.Calculate(pbar, value) - _Slong.Calculate(pbar, value);
-            var signal = _Ssignal.Calculate(pbar, macd);
-            m3 = macd - signal;
 
             #endregion
 
@@ -886,18 +888,24 @@ namespace ATAS.Indicators.Technical
             var bEMA200Bounce = false;
             var bVWAPBounce = false;
             var bKAMABounce = false;
+            decimal c0UpWick = 0;
+            decimal c0DownWick = 0;
 
-            if (c0R)
-            {
-                bEMA200Bounce = (candle.High > e200 && candle.Open < e200);// || (candle.Low < e200 && value > e200);
-                bVWAPBounce = (candle.High > vwap && candle.Open < vwap);//  || (candle.Low < vwap && value > vwap);
-                bKAMABounce = (candle.High > kama9 && candle.Open < kama9);
-            }
-            else if (c0G)
+            if (c0G)
             {
                 bEMA200Bounce = (candle.Low < e200 && candle.Open > e200); // (candle.High > e200 && value < e200) ||
                 bVWAPBounce = (candle.Low < vwap && candle.Open > vwap); // (candle.High > vwap && value < vwap) || 
                 bKAMABounce = (candle.Low < kama9 && candle.Open > kama9);
+                c0UpWick = Math.Abs(candle.High - candle.Close);
+                c0DownWick = Math.Abs(candle.Low - candle.Open);
+            }
+            else if (c0R)
+            {
+                bEMA200Bounce = (candle.High > e200 && candle.Open < e200); // || (candle.Low < e200 && value > e200);
+                bVWAPBounce = (candle.High > vwap && candle.Open < vwap); //  || (candle.Low < vwap && value > vwap);
+                bKAMABounce = (candle.High > kama9 && candle.Open < kama9);
+                c0UpWick = Math.Abs(candle.High - candle.Open);
+                c0DownWick = Math.Abs(candle.Low - candle.Close);
             }
 
             if (bEMA200Bounce || bVWAPBounce)
@@ -977,6 +985,9 @@ namespace ATAS.Indicators.Technical
 
             if (bShowUp && bShowRegularBuySell)
             {
+                if (bIgnoreBadWicks)
+                    if ((c0UpWick > (c0Body * 3) && c0DownWick < c0Body) || bDoji)
+                        return;
                 _posSeries[pbar] = candle.Low - (_tick * iOffset);
                 iFutureSound = 10;
             }
@@ -986,6 +997,9 @@ namespace ATAS.Indicators.Technical
 
             if (bShowDown && bShowRegularBuySell)
             {
+                if (bIgnoreBadWicks)
+                    if ((c0DownWick > (c0Body * 3) && c0UpWick < c0Body) || bDoji)
+                        return;
                 _negSeries[pbar] = candle.High + _tick * iOffset;
                 iFutureSound = 11;
             }
